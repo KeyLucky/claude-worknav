@@ -61,7 +61,7 @@ WORKNAV_HOOK_DEBUG=1 python3 hooks/on_tool.py < 페이로드.json
 3. **두 렌더러는 극단 입력에서도 같은 말을 한다.** 한쪽은 예외, 한쪽은 빈 줄이면
    그 순간 둘 다 못 믿게 된다.
 
-스키마 검증은 `store.validate()` 한고에 모여 있고, JS 렌더러에도 같은 규칙이 있다.
+스키마 검증은 `store.validate()` 한곳에 모여 있고, JS 렌더러에도 같은 규칙이 있다.
 
 ## 테스트
 
