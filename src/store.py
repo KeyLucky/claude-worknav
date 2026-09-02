@@ -114,6 +114,15 @@ def force_utf8_output():
             pass
 
 
+def session_id():
+    """Claude Code 가 심는 세션 식별자.
+
+    실제 이름은 `CLAUDE_CODE_SESSION_ID` 다 — 2.1.251 훅 환경에서 실측했다.
+    `CLAUDE_SESSION_ID` 는 존재하지 않아서 v0 에서는 이 값이 항상 null 이었다.
+    """
+    return os.environ.get("CLAUDE_CODE_SESSION_ID") or os.environ.get("CLAUDE_SESSION_ID")
+
+
 def now_iso():
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -256,12 +265,16 @@ def edit(root=None, create=False):
             handle.close()
 
 
-def log_event(payload, root=None):
-    """append-only 이벤트 로그. v0 사용 데이터를 여기서 걷는다."""
+def log_event(payload, root=None, session=None):
+    """append-only 이벤트 로그. 사용 데이터를 여기서 걷는다.
+
+    세션 식별자를 같이 남긴다 — Stop 훅이 "이번 세션에 무슨 일이 있었는지" 를
+    세려면 남의 세션 기록과 구분할 수 있어야 한다.
+    """
     root = Path(root) if root else project_root()
     path = events_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    record = {"ts": now_iso()}
+    record = {"ts": now_iso(), "session": session or session_id()}
     record.update(payload)
     line = json.dumps(record, ensure_ascii=False) + "\n"
     with open(path, "a", encoding="utf-8") as fh:
@@ -312,7 +325,9 @@ def path_ids(state, node_id):
     return chain
 
 
-def add_node(state, title, parent, node_state, origin=None):
+def add_node(state, title, parent, node_state, origin=None, auto=False):
+    """auto=True 는 훅이 감지해서 담은 것. 사람이 적은 것과 구분해야
+    오탐률을 나중에 실측할 수 있다."""
     title = (title or "").strip()
     if not title:
         raise UserError("제목이 비었습니다")
@@ -327,7 +342,8 @@ def add_node(state, title, parent, node_state, origin=None):
         "opened_at": stamp,
         "closed_at": None,
         "touched_at": stamp,
-        "session_id": os.environ.get("CLAUDE_SESSION_ID"),
+        "session_id": session_id(),
+        "auto": bool(auto),
     }
     return node_id
 
