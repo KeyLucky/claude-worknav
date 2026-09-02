@@ -224,7 +224,7 @@ test('E8 alignment 를 바꾸면 상태바 항목을 다시 만든다', (t) => {
   }
 });
 
-test('E9 제목에 $( 가 있어도 표지판이 통 사라지지 않는다', (t) => {
+test('E9 제목에 $( 가 있어도 표지판이 통째로 사라지지 않는다', (t) => {
   if (pythonMissing()) return t.skip('python3 없음');
   const repo = makeRepo();
   try {

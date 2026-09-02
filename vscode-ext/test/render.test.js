@@ -90,7 +90,7 @@ test('R10 상태 표시줄 아이콘 문법을 무력화한다', () => {
   const line = render.pathLine(state, { maxWidth: 200 });
   // path_line 자체는 파이썬과 같은 문자열을 유지한다.
   assert.ok(line.includes('$(cat'), line);
-  // 상태 표시줄로 나갈 때만 아이콘으로 해석되지 않게 끕는다.
+  // 상태 표시줄로 나갈 때만 아이콘으로 해석되지 않게 끊는다.
   const safe = render.escapeStatusBar(line);
   assert.ok(!/\$\(/.test(safe), safe);
   assert.ok(safe.includes('cat foo'), safe);
@@ -100,7 +100,7 @@ test('R10 상태 표시줄 아이콘 문법을 무력화한다', () => {
 test('R11 폭이 아무리 좁아도 루트와 현재를 버리지는 않는다 — 그래서 하한이 있다', () => {
   const state = chainState(['출발지', '중간', '현재작업'], []);
   const narrow = render.pathLine(state, { maxWidth: 12 });
-  // 예산을 못 지키더라도 두 끕은 남는다. 이게 의도된 트레이드오프다.
+  // 예산을 못 지키더라도 두 끝은 남는다. 이게 의도된 트레이드오프다.
   assert.ok(narrow.includes('출발') || narrow.includes('출…'), narrow);
   assert.ok(narrow.includes('현재') || narrow.includes('현…'), narrow);
   // 하한이 무한정 크지는 않아야 한다 — 30칸 언저리로 수렴한다.
