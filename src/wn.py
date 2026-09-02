@@ -77,7 +77,7 @@ def cmd_push(args, root):
     if not note:
         raise store.UserError(
             "복귀지점(--resume-note)이 필요합니다. "
-            "지금 노드에서 어디까지 했고 다음에 뭘 하려 했는지 한 문장."
+            "지금 노드에서 어디까지 했고 다음에 뭔 하려 했는지 한 문장."
         )
     with store.edit(root) as state:
         cursor = _require_cursor(state)
@@ -309,6 +309,11 @@ def main(argv=None):
     except store.LockBusy:
         print("✗ 다른 세션이 상태 파일을 쓰는 중입니다. 잠시 후 다시.", file=sys.stderr)
         return EXIT_LOCK
+    except OSError as exc:
+        # 디스크가 늘 쓸 수 있는 건 아니다 — 읽기 전용 디렉터리, .claude/worknav 가
+        # 파일로 존재, 디스크 가득. 사람에게 파이썬 스택을 보여줄 일이 아니다.
+        print("✗ 상태 파일을 다룰 수 없습니다: %s" % exc, file=sys.stderr)
+        return EXIT_STATE
 
 
 if __name__ == "__main__":
