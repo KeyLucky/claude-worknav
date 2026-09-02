@@ -72,7 +72,7 @@ function chainState(titles, parkedTitles) {
   };
 }
 
-/** 압축 규칙이 실제로 밟힐도록 폭·깊이·문자 종류를 흩어 놓는다. */
+/** 압축 규칙이 실제로 밟힘도록 폭·깊이·문자 종류를 흩어 놓는다. */
 const CASES = [
   { name: 'depth0', state: chainState(['논문 실험 파트 재현'], []) },
   {
