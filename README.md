@@ -1,4 +1,4 @@
-# worknav — 작업 길잡이 (v0)
+# worknav — 작업 길잡이 (v0.5)
 
 작업 도중 의문과 부가작업이 가지치기로 늘어나 원래 목표를 잃는 문제를 다룬다.
 
@@ -9,18 +9,46 @@
 
 ## 현재 상태
 
-v0 = 수동 슬래시 커맨드 + 표지판. **훅은 아직 없다** (자동 감지는 v0.5).
-인수 테스트 44개 통과 (본체) + 26개 (VS Code 확장).
+v0.5 = 수동 슬래시 커맨드 + 표지판 + **훅 자동화**.
+인수 테스트 87개 통과 (본체) + 26개 (VS Code 확장).
 
 ```
 src/store.py       스키마, 파일 잠금, 원자적 교체
 src/render.py      경로 한 줄 / 트리 / 보류함
 src/wn.py          CLI — 상태 변경의 유일한 진입점
 src/statusline.py  읽기 전용 상태줄
+src/detect.py      가지 후보 감지 (정규식만, LLM 아님)
+src/hookrt.py      훅 stdin/stdout 계약, 출력 예산, fail-safe
+src/hooklogic.py   훅 4종의 로직 (순수 함수라 단위 테스트된다)
+hooks/             훅 정의 + 진입점 4개
 commands/          슬래시 커맨드 8개
 tools/             settings.json 병합기 (기존 키 보존)
-tests/             인수 테스트 T1~T8·T14 (기능), W1~W7 (이식성)
+tests/             인수 테스트 T1~T14 (기능), W1~W7 (이식성), 훅 42개
 vscode-ext/        VS Code 상태 표시줄 확장 (별도 설치)
+```
+
+### 훅이 자동으로 하는 일
+
+플러그인으로 설치하면 다음이 저절로 돈다. 명령을 안 쳐도 된다.
+
+| 시점 | 하는 일 |
+|---|---|
+| 세션 시작 | 현재 경로와 복귀지점, 보류함 개수를 되살려 준다 |
+| 프롬프트마다 | 현재 경로를 한 줄 주입. 오래 열린 노드가 있으면 POP 을 상기시킨다 |
+| 툴 실행 후 | 에러·경고·`TODO` 를 보류함에 **자동으로 담고** 한 줄 알린다 |
+| 세션 종료 | 열린 노드·보류함·깊이 게이트 횟수 요약 |
+
+**자동으로 하지 않는 것이 더 중요하다.** PUSH(가지로 내려가기)는 어떤 경우에도
+자동화하지 않는다. 담기(PARK)는 틀려도 쓸모없는 한 줄이 늘고 끝나지만, 내려가기는
+한 번 잘못 판단하면 사람을 엉뚱한 곳으로 끌고 가고 그러면 도구 자체를 못 믿게 된다.
+
+훅은 **옵트인**이다. `/wn-root` 를 한 번도 안 한 프로젝트에서는 아무 말도 하지 않는다.
+
+무언가 잘못 도는 것 같으면 진단 스위치를 켠다. 평소에는 훅이 어떤 오류도 삼키기 때문에
+증상이 "아무것도 안 뜬다" 로만 보인다.
+
+```bash
+WORKNAV_HOOK_DEBUG=1 python3 hooks/on_tool.py < 페이로드.json
 ```
 
 ## 테스트
@@ -79,6 +107,10 @@ claude plugin install worknav@worknav
 복사할 때 커맨드 안의 `${CLAUDE_PLUGIN_ROOT}/src/wn.py` 를 실제 설치 경로로 치환한다.
 `install.sh` 는 bash 스크립트라 **Windows 에서는 쓸 수 없다.** Windows 에서는 1번이나 2번을 쓴다.
 
+**이 방법으로는 훅이 설치되지 않는다.** 훅은 `settings.json` 의 `hooks` 블록에 병합해야
+하는데, 이미 살아 있는 훅 설정을 건드릴 위험이 있어 자동화하지 않았다. 자동 감지까지
+쓰려면 1번이나 2번(플러그인)으로 설치한다.
+
 ### VS Code 상태 표시줄 확장 (선택)
 
 사이드바 채팅 UI 로 작업하면 터미널 상태줄이 보이지 않는다 (DESIGN §5.4). 같은 표지판을
@@ -120,7 +152,9 @@ npx --yes @vscode/vsce package --allow-missing-repository
 프로젝트(git root)의 `.claude/worknav/` 아래.
 
 - `state.json` — 단일 진실원
-- `events.jsonl` — append-only 이벤트 로그. v0 2주 사용 데이터를 여기서 걷는다
+- `events.jsonl` — append-only 이벤트 로그. 사용 데이터를 여기서 걷는다.
+  자동 적재는 `result: "auto"` 로 남으므로 나중에 오탐률을 실측할 수 있다
+- `hookstate.json` — 훅의 알림 억제 캐시. 진실원이 아니라서 지워도 무해하다
 - `archive/` — `root --force` 로 밀려난 이전 트리
 
 커밋하고 싶지 않으면 `.gitignore` 에 `/.claude/worknav/` 를 넣는다. 도구는 관여하지 않는다.
