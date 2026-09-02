@@ -139,7 +139,7 @@ def path_line(state, max_width=None, color=True):
     titles = [state["nodes"][nid]["title"] for nid in chain]
 
     def build(kept, limit):
-        """kept 는 남길 인덱스의 오름차순 목록. 끕긴 자리에만 … 를 넣는다."""
+        """kept 는 남길 인덱스의 오름차순 목록. 끊긴 자리에만 … 를 넣는다."""
         parts = []
         previous = None
         for index in kept:
@@ -149,7 +149,7 @@ def path_line(state, max_width=None, color=True):
             previous = index
         return "⟩ " + " › ".join(parts)
 
-    # 1단계: 가운데 항목을 하나씩 버린다. 인덱스 목록이 매번 줄어들므로 반드시 끝난다.
+    # 1단계: 가운데 항목을 하나씩 버린다. 인덱스 목록이 매번 줄어드므로 반드시 끝난다.
     # 첫 항목(루트)과 마지막 항목(현재)은 pop 대상에서 구조적으로 빠진다.
     kept = list(range(len(titles)))
     # 다만 한 번에 하나씩 버리면 O(깊이^2) 다. 깊이 3000 짜리 트리에서 상태줄이
