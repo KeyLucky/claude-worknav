@@ -1,0 +1,6 @@
+test/**
+.vscode/**
+**/*.map
+**/.eslintrc*
+.gitignore
+*.vsix

@@ -1,0 +1,98 @@
+{
+  "name": "worknav-statusbar",
+  "displayName": "worknav — 작업 길잡이 표지판",
+  "description": "루트 목표에서 현재 위치까지의 경로를 VS Code 상태 표시줄에 항상 띄웁니다. worknav 상태 파일을 읽기만 합니다.",
+  "version": "0.1.0",
+  "publisher": "worknav",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "worknav",
+    "claude-code",
+    "focus",
+    "task-stack"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "worknav.showTree",
+        "title": "worknav: 전체 트리 보기",
+        "category": "worknav"
+      },
+      {
+        "command": "worknav.showInbox",
+        "title": "worknav: 보류함 보기",
+        "category": "worknav"
+      },
+      {
+        "command": "worknav.refresh",
+        "title": "worknav: 상태 다시 읽기",
+        "category": "worknav"
+      }
+    ],
+    "configuration": {
+      "title": "worknav",
+      "properties": {
+        "worknav.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "상태 표시줄에 worknav 경로를 표시합니다."
+        },
+        "worknav.statePath": {
+          "type": "string",
+          "default": "",
+          "description": "상태 파일 경로를 직접 지정합니다. 비워두면 git 루트의 .claude/worknav/state.json 을 자동으로 찾습니다."
+        },
+        "worknav.maxWidth": {
+          "type": "number",
+          "default": 52,
+          "minimum": 12,
+          "description": "상태 표시줄 한 줄의 최대 표시 폭(한글은 2칸으로 셉니다). 루트와 현재 위치는 어떤 값에서도 버리지 않기 때문에 30칸 언저리가 실제 하한입니다. 창이 좁아 줄이 잘리면 이 값을 낮추세요."
+        },
+        "worknav.titleMax": {
+          "type": "number",
+          "default": 12,
+          "minimum": 4,
+          "description": "경로에 들어가는 노드 제목 하나의 최대 글자 수."
+        },
+        "worknav.alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "default": "left",
+          "description": "상태 표시줄에서 표지판이 붙는 쪽."
+        },
+        "worknav.pollIntervalMs": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 200,
+          "description": "상태 파일 변경을 확인하는 주기(밀리초)."
+        },
+        "worknav.warnBackgroundFromDepth": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "description": "이 깊이부터 상태 표시줄 배경을 경고색으로 바꿉니다. 0 이하면 배경색을 쓰지 않습니다."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KeyLucky/claude-worknav"
+  }
+}
