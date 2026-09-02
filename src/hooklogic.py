@@ -37,11 +37,17 @@ def _hookstate_path(root):
 
 
 def load_hookstate(root):
-    """알림 억제용 캐시. 진실원이 아니라서 잠그지 않고 깨져도 무해하다."""
+    """알림 억제용 캐시. 진실원이 아니라서 잠그지 않고 깨져도 무해하다.
+
+    "깨져도 무해" 하려면 모양까지 봐야 한다. 객체가 아닌 걸 그대로 돌려주면
+    호출부의 `.get` 에서 예외가 나고, 훅의 fail-safe 가 그걸 삼켜서 밖에서는
+    "아무것도 안 뜬다" 로만 보인다 — 원인을 짚을 단서가 없는 그 실패 모드다.
+    """
     try:
-        return json.loads(_hookstate_path(root).read_text(encoding="utf-8"))
+        data = json.loads(_hookstate_path(root).read_text(encoding="utf-8"))
     except Exception:
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def save_hookstate(root, data):
@@ -95,7 +101,7 @@ def session_start(payload, root):
     if node and node.get("resume_note"):
         lines.append("복귀지점: %s" % node["resume_note"])
 
-    ttl = (state.get("config") or {}).get("park_ttl_days", 7)
+    ttl = render.cfg_int(state.get("config"), "park_ttl_days", 7)
     now = datetime.now().astimezone()
     expired = sum(
         1
@@ -150,16 +156,18 @@ def _stale_notice(state, root, now=None):
     cursor, node = _cursor_node(state)
     if not node or node.get("parent") is None:
         return None  # 루트는 목표 자체라 끝까지 열려 있다
-    limit = (state.get("config") or {}).get("stale_open_min", 30)
+    limit = render.cfg_int(state.get("config"), "stale_open_min", 30)
     age = store.age_minutes(node, ref=now)
     if age is None or age < limit:
         return None
 
     cache = load_hookstate(root)
-    last = cache.get("stale_notice") or {}
+    last = cache.get("stale_notice")
+    if not isinstance(last, dict):
+        last = {}
     now = now or datetime.now().astimezone()
     if last.get("node") == cursor:
-        previous = store.parse_iso(last.get("at"))
+        previous = store.parse_iso(last.get("at") if isinstance(last.get("at"), str) else None)
         if previous and (now - previous).total_seconds() / 60.0 < STALE_REPEAT_MIN:
             return None
 
@@ -305,6 +313,9 @@ def _session_event_counts(root, session_id, tail_lines=400):
         try:
             rec = json.loads(raw)
         except ValueError:
+            continue
+        # 유효한 JSON 이라고 객체인 것은 아니다. `123` 한 줄도 파싱은 성공한다.
+        if not isinstance(rec, dict):
             continue
         if rec.get("session") != session_id:
             continue
