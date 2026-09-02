@@ -39,7 +39,7 @@ say "2. 슬래시 커맨드 → $DEST_COMMANDS"
 for f in "$SRC_DIR"/commands/*.md; do
   name="$(basename "$f")"
   if [ -e "$DEST_COMMANDS/$name" ]; then
-    plan "$name  (기존 파일 덮어씀)"
+    plan "$name  (기존 파일 덮어쐬)"
   else
     plan "$name"
   fi
@@ -64,6 +64,15 @@ if [ "$STATUSLINE" = 1 ]; then
 else
   say "  [건너뜀] --statusline 을 주지 않았습니다. 상태줄 없이도 슬래시 커맨드는 동작합니다."
 fi
+
+say ""
+say "4. 훅 (자동 감지·자동 적재)"
+say "  [건너뜀] 이 설치 경로는 훅을 등록하지 않습니다."
+say "           훅은 남의 settings.json 안으로 병합해야 하는데, 이미 살아 있는"
+say "           hooks 블록을 건드릴 위험이 있어 자동화하지 않습니다."
+say "           훅까지 쓰려면 플러그인으로 설치하세요:"
+say "             /plugin marketplace add KeyLucky/claude-worknav"
+say "             /plugin install worknav@worknav"
 
 say ""
 if [ "$APPLY" = 1 ]; then
