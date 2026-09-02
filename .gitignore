@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .claude/worknav/
 vscode-ext/node_modules/
+vscode-ext/*.vsix
