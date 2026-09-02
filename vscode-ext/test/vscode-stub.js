@@ -1,9 +1,9 @@
 'use strict';
 /**
- * extension.js 를 vscode 없이 돌리기 위한 최소 스텀.
+ * extension.js 를 vscode 없이 돌리기 위한 최소 스텁.
  *
  * 실제 확장 호스트를 띄우지 않고도 "파일이 이렇게 생겼을 때 상태 표시줄에 무엇이
- * 뜨는가"를 그대로 확인할 수 있다. 스텀은 기록만 하고 판단하지 않는다.
+ * 뜨는가"를 그대로 확인할 수 있다. 스텁은 기록만 하고 판단하지 않는다.
  */
 
 const Module = require('node:module');
@@ -108,7 +108,7 @@ function createStub(options) {
   return stub;
 }
 
-/** require('vscode') 를 스텀으로 바꾼 채 extension.js 를 새로 로드한다. */
+/** require('vscode') 를 스텁으로 바꾼 채 extension.js 를 새로 로드한다. */
 function loadExtension(stub, extensionPath) {
   const original = Module._load;
   Module._load = function (request, parent, isMain) {
