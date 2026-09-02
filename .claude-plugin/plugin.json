@@ -1,0 +1,15 @@
+{
+  "name": "worknav",
+  "version": "0.1.0",
+  "description": "작업 중 가지치기로 길을 잃지 않게 하는 길잡이 — 루트 목표에서 현재까지의 경로를 스택으로 관리하고, 새 의문/부가작업은 기본적으로 보류함에 담는다",
+  "author": {
+    "name": "worknav contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "focus",
+    "task-stack",
+    "navigation",
+    "context-switching"
+  ]
+}

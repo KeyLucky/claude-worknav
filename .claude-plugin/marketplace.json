@@ -1,0 +1,22 @@
+{
+  "name": "worknav",
+  "owner": {
+    "name": "worknav contributors"
+  },
+  "metadata": {
+    "description": "작업 길잡이 — 가지치기로 늘어나는 의문과 부가작업을 스택 + 보류함으로 관리한다."
+  },
+  "plugins": [
+    {
+      "name": "worknav",
+      "source": "./",
+      "description": "루트 목표에서 현재 위치까지의 경로를 관리하는 작업 길잡이. PUSH / POP / PARK 세 연산과 깊이 게이트, 복귀지점 기록.",
+      "version": "0.1.0",
+      "author": {
+        "name": "worknav contributors"
+      },
+      "license": "MIT",
+      "category": "productivity"
+    }
+  ]
+}
