@@ -54,9 +54,27 @@ _NOISE = re.compile(
 )
 
 
+def _as_dict(value):
+    """훅 페이로드는 Claude Code 가 주므로 모양이 보장된다 — 고 가정하면 안 된다.
+
+    MCP 툴이나 다음 버전이 다른 모양을 주면 여기서 예외가 나는데, 훅의 fail-safe 가
+    그걸 삼켜서 밖에서는 "아무것도 안 담긴다" 로만 보인다. 원인을 짚을 단서가 없다.
+    실제로 그렇게 한 번 놓쳤다.
+    """
+    return value if isinstance(value, dict) else {}
+
+
+def _as_text(value):
+    if isinstance(value, str):
+        return value
+    return ""
+
+
 def _clean(line):
-    """제목으로 쓸 수 있게 다듬는다. ANSI 와 앞머리 경로를 걷어낸다."""
-    line = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", line)
+    """제목으로 쓸 수 있게 다듬는다. ANSI 와 제어문자를 걷어낸다."""
+    line = _as_text(line)
+    line = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", line)
+    line = re.sub(r"[\x00-\x1f\x7f]", " ", line)
     line = line.strip().strip("|").strip()
     line = re.sub(r"\s+", " ", line)
     if len(line) > TITLE_MAX:
@@ -70,7 +88,7 @@ def normalize(title):
     같은 에러가 툴 호출마다 다시 잡히면 보류함이 그 한 줄로 가득 찬다.
     이걸 막는 게 자동 적재를 쓸 만하게 만드는 유일한 장치다.
     """
-    text = (title or "").lower()
+    text = _as_text(title).lower()
     text = re.sub(r"['\"`][^'\"`]*['\"`]", " ", text)   # 따옴표 안은 매번 다르다
     text = re.sub(r"(?:/[\w.\-]+)+", " ", text)          # 경로
     text = re.sub(r"\b\d+\b", " ", text)                 # 줄 번호, 카운트
@@ -86,12 +104,12 @@ def _tool_text(tool_name, tool_input, tool_response):
     실패한 명령이 통째로 안 잡히는 걸 보고서야 발견했다 — 가지의 주요 원천이
     바로 그 실패한 명령이다.
     """
-    tool_input = tool_input or {}
-    tool_response = tool_response or {}
     if isinstance(tool_response, str):
         return tool_response
+    tool_input = _as_dict(tool_input)
+    tool_response = _as_dict(tool_response)
     if tool_name == "Bash":
-        parts = [tool_response.get("stdout") or "", tool_response.get("stderr") or ""]
+        parts = [_as_text(tool_response.get("stdout")), _as_text(tool_response.get("stderr"))]
         return "\n".join(p for p in parts if p)
     # Edit / Write 는 응답이 아니라 사람이 새로 써 넣은 내용에서 찾는다.
     for key in ("new_string", "content"):
@@ -102,9 +120,9 @@ def _tool_text(tool_name, tool_input, tool_response):
 
 
 def _skip_reason(tool_name, tool_input, tool_response):
-    tool_input = tool_input or {}
-    command = tool_input.get("command") or ""
-    haystack = command + " " + str(tool_input.get("file_path") or "")
+    tool_input = _as_dict(tool_input)
+    command = _as_text(tool_input.get("command"))
+    haystack = command + " " + _as_text(tool_input.get("file_path"))
     if any(marker in haystack for marker in _SELF_MARKERS):
         return "self"
     if tool_name == "Bash":
