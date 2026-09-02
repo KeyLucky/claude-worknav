@@ -24,7 +24,7 @@ def main(argv=None):
     parser.add_argument("--settings", required=True)
     parser.add_argument("--command", required=True)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--replace", action="store_true", help="기존 statusLine 을 덮어씌")
+    parser.add_argument("--replace", action="store_true", help="기존 statusLine 을 덮어씀")
     args = parser.parse_args(argv)
 
     path = Path(os.path.expanduser(args.settings))

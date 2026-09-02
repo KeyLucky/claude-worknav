@@ -102,7 +102,7 @@ def path_line(state, max_width=None, color=True):
     titles = [state["nodes"][nid]["title"] for nid in chain]
 
     def build(kept, limit):
-        """kept 는 남길 인덱스의 오름차순 목록. 끕긴 자리에만 … 를 넣는다."""
+        """kept 는 남길 인덱스의 오름차순 목록. 끊긴 자리에만 … 를 넣는다."""
         parts = []
         previous = None
         for index in kept:
