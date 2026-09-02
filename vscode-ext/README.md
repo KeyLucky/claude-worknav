@@ -1,6 +1,6 @@
 # worknav — 작업 길잡이 표지판 (VS Code)
 
-작업하다 "내가 왜 이걸 하고 있었지"가 되는 걸 막는 한 줄입니다. VS Code 하단 상태 표시줄에 고정으로 뚜니다.
+작업하다 "내가 왜 이걸 하고 있었지"가 되는 걸 막는 한 줄입니다. VS Code 하단 상태 표시줄에 고정으로 뜹니다.
 
 ```
 ⟩ 논문 실험 파트 재현 › ablation S_… › seed 고정  d2  ⑂2
@@ -9,17 +9,17 @@
 - 맨 왼쪽 — 원래 하려던 것(루트 목표)
 - 맨 오른쪽 — 지금 실제로 붙잡고 있는 것
 - `d2` — 두 단계 내려왔다
-- `⑂2` — 나중에 할 것 2개를 담아둑다
+- `⑂2` — 나중에 할 것 2개를 담아뒀다
 
 마우스를 올리면 전체 경로와 각 단계의 복귀지점이 나옵니다. 클릭하면 전체 트리가 열립니다.
 
 ## 왜 따로 있나
 
-worknav 본체는 Claude Code 플러그인이고, 표지판은 Claude Code 터미널 상태줄에 뚜니다.
+worknav 본체는 Claude Code 플러그인이고, 표지판은 Claude Code 터미널 상태줄에 뜹니다.
 그런데 VS Code 확장의 사이드바 채팅 UI로 작업하면 그 줄이 보이지 않습니다 — 상태줄은
 터미널 화면 전용 요소이고, 웹뷰에는 그릴 코드 자체가 없습니다.
 
-이 확장은 그 표지판을 VS Code 상태 표시줄로 옛깁니다. 사이드바로 작업하든 파일을 보든
+이 확장은 그 표지판을 VS Code 상태 표시줄로 옮깁니다. 사이드바로 작업하든 파일을 보든
 같은 자리에 계속 남습니다.
 
 ## 동작 방식
@@ -33,19 +33,16 @@ Claude Code 확장이 업데이트돼도 깨지지 않습니다.
 
 ## 설치
 
-1. worknav 본체를 먼저 설치합니다 (`/plugin marketplace add KeyLucky/claude-worknav`)
+1. worknav 본체를 먼저 설치합니다 (Claude Code 플러그인 또는 `install.sh`)
 2. 이 확장을 설치합니다
 
 ```bash
 cd vscode-ext
-npx --yes @vscode/vsce package --allow-missing-repository   # .vsix 생성
+npx @vscode/vsce package        # worknav-statusbar-0.1.0.vsix 생성
 code --install-extension worknav-statusbar-0.1.0.vsix
 ```
 
-`code` 명령을 쓸 수 없으면 확장 뷰(Ctrl+Shift+X) → 우측 상단 `...` → `Install from VSIX...`
-에서 만들어진 파일을 고르면 됩니다.
-
-`.claude/worknav/state.json` 이 생기는 순간부터 표지판이 뚜니다. 별도 설정은 필요 없습니다.
+`.claude/worknav/state.json` 이 생기는 순간부터 표지판이 뜹니다. 별도 설정은 필요 없습니다.
 
 ## 명령
 

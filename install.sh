@@ -39,7 +39,7 @@ say "2. 슬래시 커맨드 → $DEST_COMMANDS"
 for f in "$SRC_DIR"/commands/*.md; do
   name="$(basename "$f")"
   if [ -e "$DEST_COMMANDS/$name" ]; then
-    plan "$name  (기존 파일 덮어쐬)"
+    plan "$name  (기존 파일 덮어씀)"
   else
     plan "$name"
   fi
