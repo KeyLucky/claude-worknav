@@ -118,7 +118,7 @@ def bump_turn(root, session):
     """규칙을 주입한 횟수를 센다. 효과를 재려면 분모가 필요하다.
 
     events.jsonl 에 매 턴 한 줄씩 쓰지 않는 이유는 둘이다 — 로그가 실제
-    작업 기록보다 잡음으로 뎀둑이고, 매 턴 append 가 붙는다. 여기는 잠금도
+    작업 기록보다 잡음이 많아지고, 매 턴 append 가 붙는다. 여기는 잠금도
     안 걸고 원자적 교체만 하므로, 동시 세션에서 증가분 하나를 잃을 수는
     있다. 통계값이라 그 정도는 감수한다 — 대신 파일이 깨지지는 않는다.
     """
@@ -133,7 +133,7 @@ def bump_turn(root, session):
     except (TypeError, ValueError):
         turns[session] = 1
     if len(turns) > TURN_SESSIONS_KEPT:
-        # 오래된 세션부터 버린다. 삽입 순서가 곳 처음 등장한 순서다.
+        # 오래된 세션부터 버린다. 삽입 순서가 처음 등장한 순서와 같다.
         for key in list(turns)[: len(turns) - TURN_SESSIONS_KEPT]:
             turns.pop(key, None)
     cache["turns"] = turns
