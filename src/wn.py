@@ -77,7 +77,7 @@ def cmd_push(args, root):
     if not note:
         raise store.UserError(
             "복귀지점(--resume-note)이 필요합니다. "
-            "지금 노드에서 어디까지 했고 다음에 뭔 하려 했는지 한 문장."
+            "지금 노드에서 어디까지 했고 다음에 무엇을 하려 했는지 한 문장."
         )
     with store.edit(root) as state:
         cursor = _require_cursor(state)
