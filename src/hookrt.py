@@ -18,7 +18,11 @@ import os
 import sys
 import threading
 
-CONTEXT_BUDGET = 400   # UserPromptSubmit/SessionStart 주입 상한 (문자)
+# UserPromptSubmit/SessionStart 주입 상한 (문자).
+# 400 이었는데 520 으로 올렸다. 분기규칙을 매 턴 같이 넣기로 하면서 경로 한 줄
+# 140 + 규칙 ~196(설치 경로가 길면 더) + stale 80 이 한 번에 들어가야 하는데,
+# 400 이면 설치 위치에 따라 규칙 끝줄이 잘린다. 잘린 규칙은 없는 규칙보다 나쁘다.
+CONTEXT_BUDGET = 520
 MESSAGE_BUDGET = 80    # PostToolUse/Stop 한 줄 상한 (문자)
 STDIN_TIMEOUT_S = 1.0
 
