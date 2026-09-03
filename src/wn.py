@@ -77,7 +77,7 @@ def cmd_push(args, root):
     if not note:
         raise store.UserError(
             "복귀지점(--resume-note)이 필요합니다. "
-            "지금 노드에서 어디까지 했고 다음에 뭘 하려 했는지 한 문장."
+            "지금 노드에서 어디까지 했고 다음에 뭔 하려 했는지 한 문장."
         )
     with store.edit(root) as state:
         cursor = _require_cursor(state)
@@ -225,6 +225,20 @@ def cmd_path(args, root):
     return EXIT_OK
 
 
+def cmd_stats(args, root):
+    """이 도구가 실제로 쓰이고 있는지, 임계값이 맞는지를 로그에서 센다."""
+    import hooklogic
+    import stats
+
+    events = stats.read_events(root)
+    turns = hooklogic.load_hookstate(root).get("turns")
+    state = store.load_or_none(root)
+    summary = stats.summarize(events, turns)
+    advice = stats.advise(summary, (state or {}).get("config"))
+    _out(stats.render(summary, advice))
+    return EXIT_OK
+
+
 def cmd_dump(args, root):
     print(json.dumps(store.load(root), ensure_ascii=False, indent=2))
     return EXIT_OK
@@ -276,6 +290,7 @@ def build_parser():
         ("where", cmd_where, "현재 경로와 열린 노드"),
         ("tree", cmd_tree, "전체 트리"),
         ("inbox", cmd_inbox, "보류함"),
+        ("stats", cmd_stats, "사용 통계와 임계값 조정 근거"),
         ("dump", cmd_dump, "상태 JSON 원본"),
     ):
         p = sub.add_parser(name, help=helptext)
