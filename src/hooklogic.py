@@ -110,6 +110,36 @@ def save_hookstate(root, data):
         pass  # 억제 캐시를 못 써도 알림이 좀 더 나올 뿐이다
 
 
+# 턴 카운터에 남겨 둘 세션 수. 이걸 안 자르면 hookstate 가 무한히 자란다.
+TURN_SESSIONS_KEPT = 30
+
+
+def bump_turn(root, session):
+    """규칙을 주입한 횟수를 센다. 효과를 재려면 분모가 필요하다.
+
+    events.jsonl 에 매 턴 한 줄씩 쓰지 않는 이유는 둘이다 — 로그가 실제
+    작업 기록보다 잡음으로 뎀둑이고, 매 턴 append 가 붙는다. 여기는 잠금도
+    안 걸고 원자적 교체만 하므로, 동시 세션에서 증가분 하나를 잃을 수는
+    있다. 통계값이라 그 정도는 감수한다 — 대신 파일이 깨지지는 않는다.
+    """
+    if not session:
+        return
+    cache = load_hookstate(root)
+    turns = cache.get("turns")
+    if not isinstance(turns, dict):
+        turns = {}
+    try:
+        turns[session] = int(turns.get(session, 0)) + 1
+    except (TypeError, ValueError):
+        turns[session] = 1
+    if len(turns) > TURN_SESSIONS_KEPT:
+        # 오래된 세션부터 버린다. 삽입 순서가 곳 처음 등장한 순서다.
+        for key in list(turns)[: len(turns) - TURN_SESSIONS_KEPT]:
+            turns.pop(key, None)
+    cache["turns"] = turns
+    save_hookstate(root, cache)
+
+
 # ------------------------------------------------------------ 공통 조각
 
 
@@ -187,6 +217,9 @@ def on_prompt(payload, root):
             "%s 루트 목표가 없다. 작업을 시작하기 전에 /wn-root <한 줄 목표> 를 먼저 확정할 것."
             % _TAG,
         )
+
+    # 주입하는 턴만 센다. 침묵한 턴은 분모가 아니다.
+    bump_turn(root, payload.get("session_id"))
 
     line, _, _ = _path_and_counts(state)
     lines = [
