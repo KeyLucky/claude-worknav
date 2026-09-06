@@ -23,6 +23,10 @@ import threading
 # 140 + 규칙 ~196(설치 경로가 길면 더) + stale 80 이 한 번에 들어가야 하는데,
 # 400 이면 설치 위치에 따라 규칙 끝줄이 잘린다. 잘린 규칙은 없는 규칙보다 나쁘다.
 CONTEXT_BUDGET = 520
+# SessionStart 는 매 턴이 아니라 세션당 몇 번(시작·압축·clear·fork)만 뜬다.
+# 그래서 여기만 예산을 더 준다 — 복귀지점과 상황 안내가 같이 들어가야 하는데
+# 520 이면 맨 뒤의 분기규칙이 잘려 나간다. 잘린 규칙은 없는 규칙보다 나쁘다.
+SESSION_BUDGET = 700
 MESSAGE_BUDGET = 80    # PostToolUse/Stop 한 줄 상한 (문자)
 STDIN_TIMEOUT_S = 1.0
 
@@ -100,8 +104,8 @@ def clip_context(text, budget=CONTEXT_BUDGET):
     return "\n".join(kept) if kept else text[:budget]
 
 
-def context_output(event_name, text):
-    text = clip_context(text)
+def context_output(event_name, text, budget=CONTEXT_BUDGET):
+    text = clip_context(text, budget)
     if not text:
         return None
     return {
