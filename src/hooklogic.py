@@ -34,7 +34,25 @@ PATH_LINE_BUDGET = 140
 # stale 알림 상한. 위와 같은 이유다.
 STALE_BUDGET = 80
 
+# 복귀지점 상한. 사람이 자유롭게 쓴 문장이라 길이가 정해져 있지 않다.
+RESUME_NOTE_BUDGET = 120
+
 _TAG = "[worknav]"
+
+# SessionStart 의 source 별 상황 안내.
+#
+# startup/resume 은 아무 말도 안 한다 — 평소에 세션을 여는 것이고, 배너만으로
+# 충분하다. 나머지 셋은 **대화만 끊기고 작업 상태는 그대로 남은** 상황이라,
+# 그 사실을 말해 주지 않으면 사용자와 도구의 인식이 어긋난 채로 진행된다.
+SOURCE_NOTICE = {
+    # 사용자는 다 지웠다고 생각하는데 worknav 는 여전히 아래층에 서 있다.
+    "clear": "대화는 지워졌지만 작업 상태는 그대로다. 아래 위치에서 이어간다.",
+    # 압축은 이 도구가 가장 필요해지는 순간이다 — 주입해 둔 규칙이 통째로 밀려난다.
+    "compact": "컨텍스트가 압축됐다. 현재 위치와 분기규칙을 다시 싣는다.",
+    # 포크는 한 상태 파일을 두 세션이 공유하게 만든다. 지금 구조에 세션별 커서가
+    # 없으므로(DESIGN §2.2) 한쪽의 push/pop 이 다른 쪽에 그대로 보인다.
+    "fork": "포크된 세션이다. 작업 상태를 원래 세션과 공유하므로 push/pop 이 양쪽에 영향을 준다.",
+}
 
 
 # ------------------------------------------------------------ 분기 판정 규칙
@@ -70,7 +88,10 @@ def rule_text(path=None):
         # --force 하지 말라" 는 지시는 커맨드 문서(commands/wn-push.md)에만
         # 있어서 이 경로로 오면 안 보인다. 게이트를 대신 통과해 주는 순간
         # 이 도구는 쓸모가 없어지므로 규칙 안에 같이 넣는다.
-        " push 가 rc=3 이면 게이트 문구를 그대로 보여주고 멈춘다. --force 는 사용자만.\n"
+        # 게이트는 둘이다 — 깊이(아래로 3칸)와 WIP(동시에 열린 노드 상한).
+        # 둘 다 rc=3 이라 모델 입장에서는 한 규칙으로 족하다. resume 도 노드를
+        # 여는 행위라 같은 게이트에 걸린다.
+        " push/resume 가 rc=3 이면 게이트 문구를 그대로 보여주고 멈춘다. --force 는 사용자만.\n"
         # 따옴표는 장식이 아니다. 설치 경로에 공백이 들어가면(윈도우의 사용자
         # 폴더나 "my plugins" 같은 이름) 모델이 만들어 실행할 명령이 통째로
         # 깨진다. 그런데 훅은 조용히 성공하므로 밖에서는 원인이 안 보인다.
@@ -168,17 +189,33 @@ def _root_open(state):
 
 
 def session_start(payload, root):
-    """복귀 배너. 상태가 없으면 침묵한다 — worknav 를 안 쓰는 프로젝트다."""
+    """복귀 배너. 상태가 없으면 침묵한다 — worknav 를 안 쓰는 프로젝트다.
+
+    `source` 는 다섯 가지다 — startup / resume / clear / compact / fork.
+    셋(clear·compact·fork)은 **대화가 끊겼는데 작업 상태는 그대로 남아 있는**
+    상황이라, 같은 배너를 말없이 띄우면 사용자가 지금 무슨 일이 일어났는지
+    모른다. 상황을 한 줄로 먼저 말해 준다.
+    """
     state = store.load_or_none(root)
     if not state or not state.get("cursor"):
         return None
 
     line, open_count, parked = _path_and_counts(state)
-    lines = ["%s %s" % (_TAG, line)]
+    source = payload.get("source")
+    notice = SOURCE_NOTICE.get(source) if isinstance(source, str) else None
+
+    lines = []
+    if notice:
+        lines.append("%s %s" % (_TAG, notice))
+        lines.append(hookrt.clip_line(line, PATH_LINE_BUDGET))
+    else:
+        lines.append("%s %s" % (_TAG, hookrt.clip_line(line, PATH_LINE_BUDGET)))
 
     _, node = _cursor_node(state)
     if node and node.get("resume_note"):
-        lines.append("복귀지점: %s" % node["resume_note"])
+        # 복귀지점은 사람이 자유롭게 쓴 문장이라 길이 상한이 없다. 안 자르면
+        # 이 한 줄이 예산을 다 먹고 뒤의 분기규칙이 통째로 사라진다.
+        lines.append("복귀지점: %s" % hookrt.clip_line(node["resume_note"], RESUME_NOTE_BUDGET))
 
     ttl = render.cfg_int(state.get("config"), "park_ttl_days", 7)
     now = datetime.now().astimezone()
@@ -187,7 +224,10 @@ def session_start(payload, root):
         for _, nd in store.parked_nodes(state)
         if render._is_expired(nd, now, ttl)
     )
-    tail = "열린 노드 %d · 보류함 %d" % (open_count, parked)
+    wip_limit = render.cfg_int(state.get("config"), "wip_limit", 3)
+    open_text = "열린 노드 %d/%d" % (open_count, wip_limit) if open_count >= wip_limit \
+        else "열린 노드 %d" % open_count
+    tail = "%s · 보류함 %d" % (open_text, parked)
     if expired:
         tail += " (%d개 %d일 경과 — /wn-inbox 로 정리)" % (expired, ttl)
     lines.append(tail)
@@ -199,7 +239,9 @@ def session_start(payload, root):
         # 한쪽만 고쳐져서 모델이 서로 다른 규칙을 듣게 된다.
         lines.append(rule_text())
 
-    return hookrt.context_output("SessionStart", "\n".join(lines))
+    return hookrt.context_output(
+        "SessionStart", "\n".join(lines), budget=hookrt.SESSION_BUDGET
+    )
 
 
 # ------------------------------------------------------------ UserPromptSubmit
@@ -221,11 +263,19 @@ def on_prompt(payload, root):
     # 주입하는 턴만 센다. 침묵한 턴은 분모가 아니다.
     bump_turn(root, payload.get("session_id"))
 
-    line, _, _ = _path_and_counts(state)
+    line, open_count, _ = _path_and_counts(state)
     lines = [
         "%s %s" % (_TAG, hookrt.clip_line(line, PATH_LINE_BUDGET)),
         rule_text(),
     ]
+
+    # 상한에 닿았으면 그 사실을 먼저 알려 준다. 이걸 안 넣으면 모델은 push 를
+    # 시도해 rc=3 을 맞고 나서야 알게 된다 — 매번 왕복이 한 번 낭비되고,
+    # "먼저 하나 닫자" 를 스스로 제안할 수도 없다. 게이트가 강제하는 것과
+    # 모델이 아는 것은 별개다.
+    wip = _wip_notice(state, open_count)
+    if wip:
+        lines.append(wip)
 
     # stale 은 마지막이지만 잘려서는 안 된다. _stale_notice 는 "알렸다" 를
     # 보조 상태에 기록하는 부작용이 있어서, 여기서 버리면 다시는 안 뜬다.
@@ -235,6 +285,17 @@ def on_prompt(payload, root):
         lines.append(stale)
 
     return hookrt.context_output("UserPromptSubmit", "\n".join(lines))
+
+
+def _wip_notice(state, open_count):
+    """상한에 닿았을 때만 한 줄. 평소에는 침묵한다.
+
+    여유가 있을 때도 매 턴 숫자를 넣으면 주입 예산만 먹고 아무것도 안 바꾼다.
+    """
+    limit = render.cfg_int(state.get("config"), "wip_limit", 3)
+    if open_count < limit:
+        return None
+    return "열린 노드 %d/%d — 새로 열려면 /wn-pop 으로 하나 닫을 것." % (open_count, limit)
 
 
 def _stale_notice(state, root, now=None):
