@@ -31,6 +31,13 @@ SCHEMA_VERSION = 1
 
 DEFAULT_CONFIG = {
     "depth_warn": 3,
+    # 동시에 열어 둘 수 있는 노드 수 (루트 제외). 깊이 게이트는 아래로 깊어지는
+    # 것만 막는다 — 형제가 옆으로 늘어나는 건 못 잡는다. 원래 문제 진술이
+    # "가지가 늘어남" 이므로 이쪽이 더 가깝다.
+    #
+    # 3 은 지어낸 값이 아니라 칸반의 1인당 WIP 상한에서 가져왔다. 동시에 벌린
+    # 개수에 비례해 각각의 완료 시간이 늘어난다는 것이 이 상한의 근거다.
+    "wip_limit": 3,
     "park_ttl_days": 7,
     "stale_open_min": 30,
     "statusline_max_width": 60,
@@ -65,7 +72,7 @@ class UserError(RuntimeError):
 
 
 class GateRefused(RuntimeError):
-    """깊이 게이트가 막았다 (exit 3). 상태는 변경되지 않는다."""
+    """게이트가 막았다 — 깊이 또는 WIP (exit 3). 상태는 변경되지 않는다."""
 
 
 # ---------------------------------------------------------------- 경로 해석
@@ -467,6 +474,23 @@ def open_nodes(state):
 
 def age_minutes(node_dict, ref=None):
     started = parse_iso(node_dict.get("opened_at"))
+    if started is None:
+        return None
+    ref = ref or datetime.now().astimezone()
+    return max(0.0, (ref - started).total_seconds() / 60.0)
+
+
+def open_age_minutes(node_dict, ref=None):
+    """**열려 있던 시간**. `age_minutes` 와 다르다.
+
+    `opened_at` 은 사실 "노드가 만들어진 시각" 이다. 보류함에 3일 있던 항목을
+    방금 꺼냈으면 age_minutes 는 4320분을 돌려준다 — WIP 게이트에서 그 숫자를
+    "열린 지 4320분" 이라고 보여주면 틀린 표지판이 된다. resume 이 남기는
+    `reopened_at` 이 있으면 그쪽을 쓴다.
+    """
+    started = parse_iso(node_dict.get("reopened_at")) or parse_iso(
+        node_dict.get("opened_at")
+    )
     if started is None:
         return None
     ref = ref or datetime.now().astimezone()
