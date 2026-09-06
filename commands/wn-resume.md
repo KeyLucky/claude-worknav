@@ -9,3 +9,5 @@ python3 "${CLAUDE_PLUGIN_ROOT}/src/wn.py" resume <node-id> --resume-note "<현�
 ```
 
 node-id 를 모르면 `/wn-inbox` 를 먼저 보여주고 고르게 하세요.
+
+**resume 도 노드를 하나 여는 행위라 WIP 게이트에 걸립니다.** 종료 코드 3 이 나오면 `/wn-push` 와 똑같이 게이트 문구를 그대로 보여주고 멈추세요. 스스로 `--force` 를 붙이지 마세요 — 보류함에서 꺼내는 것으로 상한을 우회하면 상한을 둔 의미가 없어집니다.

@@ -1,9 +1,9 @@
 {
-  "description": "작업 길잡이: 세션 시작 시 현재 경로 복원(SessionStart), 매 프롬프트에 경로 주입과 오래 열린 노드 상기(UserPromptSubmit), 에러·경고·TODO 를 보류함에 자동 적재(PostToolUse + PostToolUseFailure), 종료 요약(Stop). PUSH 는 어떤 경우에도 자동으로 하지 않는다.",
+  "description": "작업 길잡이: 대화가 끊긴 모든 지점에서 현재 경로 복원(SessionStart — startup·resume·clear·compact·fork), 매 프롬프트에 경로와 분기규칙 주입(UserPromptSubmit), 에러·경고·TODO 를 보류함에 자동 적재(PostToolUse + PostToolUseFailure), 종료 요약(Stop). PUSH 는 어떤 경우에도 자동으로 하지 않는다.",
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume",
+        "matcher": "startup|resume|clear|compact|fork",
         "hooks": [
           {
             "type": "command",
