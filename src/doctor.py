@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""worknav 자가진단 — "설정은 맞는데 왜 안 뜨지" 를 이름 붙은 원인으로 바꿈다.
+"""worknav 자가진단 — "설정은 맞는데 왜 안 뜨지" 를 이름 붙은 원인으로 바꾼다.
 
 설계 원칙이 하나다. **설정을 읽지 말고 실제로 돌려본다.**
-이 프로젝트에서 겪은 실패는 전부 "등록은 돼 있는데 실제로는 안 돌다" 였다 —
+이 프로젝트에서 겪은 실패는 전부 "등록은 돼 있는데 실제로는 안 돈다" 였다 —
 str 에 .get 을 부르던 버그, PostToolUseFailure 누락, 환경변수 이름 오타,
 낡은 마켓플레이스 사본, 소스보다 오래된 .vsix. 매니페스트만 확인하는 진단은
 그중 하나도 못 잡았을 것이다.
@@ -312,7 +312,7 @@ def check_turns(root):
 
     if store.load_or_none(root) is None:
         return [
-            _finding("turns", SKIP, "주입 기록", "이 프로젝트에서 worknav 를 아직 안 쓴",
+            _finding("turns", SKIP, "주입 기록", "이 프로젝트에서 worknav 를 아직 안 씀",
                      "/wn-root <목표> 로 시작하면 그때부터 쌓임")
         ]
 
@@ -330,17 +330,17 @@ def check_turns(root):
     if total:
         return [_finding("turns", OK, "주입 기록", "세션 %d개 · 주입 %d턴" % (sessions, total))]
 
-    # 0턴이라고 다 고장이 아니다. CLI 로만 만들고 아직 훅이 한 번도 안 돌
-    # 프로젝트에서는 0이 정상이다. 그걸 문제라고 하면 첫 사용자가 곱바로 틀린
+    # 0턴이라고 다 고장이 아니다. CLI 로만 만들고 아직 훅이 한 번도 안 돈
+    # 프로젝트에서는 0이 정상이다. 그걸 문제라고 하면 첫 사용자가 곧바로 틀린
     # 진단을 본다.
     #
     # 판정 근거는 **훅이 직접 쓴 흔적**이어야 한다. events.jsonl 의 session 은
     # 근거가 못 된다 — CLI 를 세션 안의 셸에서 치기만 해도 환경변수가 붙어서
     # 그 필드가 채워지기 때문이다(실제로 이것 때문에 오탐이 났다).
-    # hookstate.json 은 훅만 쓴다. 있으면 훅이 돌 것이다.
+    # hookstate.json 은 훅만 쓴다. 있으면 훅이 돈 것이다.
     if not hooklogic._hookstate_path(root).exists():
         return [
-            _finding("turns", SKIP, "주입 기록", "이 프로젝트에서 훅이 아직 돌 적 없음",
+            _finding("turns", SKIP, "주입 기록", "이 프로젝트에서 훅이 아직 돈 적 없음",
                      "세션에서 프롬프트를 한 번 보내면 그때부터 세어짐")
         ]
     return [
@@ -462,7 +462,7 @@ def run(root):
 
 
 def _guard(func, *args):
-    """진단이 진단 중에 죽으면 안 된다. 어떤 검사가 터져도 나머지는 돌다."""
+    """진단이 진단 중에 죽으면 안 된다. 어떤 검사가 터져도 나머지는 돈다."""
     try:
         return func(*args)
     except Exception as exc:  # noqa: BLE001 - 진단은 무슨 일이 있어도 끝까지 간다
