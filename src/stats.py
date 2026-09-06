@@ -61,6 +61,7 @@ def summarize(events, turns=None):
 
     counts = {}
     gate = forced = 0
+    wip_gate = wip_forced = 0
     parked, resumed = set(), set()
     push_ts, dwell = {}, []
     acted_sessions = set()
@@ -71,10 +72,10 @@ def summarize(events, turns=None):
         if not isinstance(cmd, str):
             continue
         result = rec.get("result")
-        # 게이트에 거절당한 push 는 상태를 한 글자도 안 바꾼 시도다. 이걸
+        # 게이트에 거절당한 시도는 상태를 한 글자도 안 바꾼 시도다. 이걸
         # 실행으로 세면 "규칙은 주입됐는데 한 번도 안 불렀다" 라는 가장 중요한
-        # 신호가 거절당한 시도만으로 지워진다.
-        refused = cmd == "push" and result == "gate"
+        # 신호가 거절당한 시도만으로 지워진다. WIP 게이트(resume 포함)도 같다.
+        refused = result in ("gate", "wip")
         if not refused:
             counts[cmd] = counts.get(cmd, 0) + 1
         session = rec.get("session")
@@ -85,6 +86,12 @@ def summarize(events, turns=None):
 
         node = rec.get("node")
         when = store.parse_iso(rec.get("ts") if isinstance(rec.get("ts"), str) else None)
+
+        # WIP 게이트는 push 와 resume 양쪽에서 걸리므로 cmd 와 무관하게 센다.
+        if result in ("wip", "wip_forced"):
+            wip_gate += 1
+            if result == "wip_forced":
+                wip_forced += 1
 
         if cmd == "push":
             if result in ("gate", "forced"):
@@ -125,6 +132,8 @@ def summarize(events, turns=None):
         "actions": actions,
         "gate": gate,
         "forced": forced,
+        "wip_gate": wip_gate,
+        "wip_forced": wip_forced,
         "parked": len(parked),
         "resumed": len(parked & resumed),
         "dwell_p50": _percentile(dwell, 0.5),
@@ -161,6 +170,17 @@ def advise(summary, config=None):
             out.append("게이트 %d회 중 force 는 %.0f%% 다. depth_warn %d 이 잘 맞는다."
                        % (summary["gate"], ratio * 100, warn))
 
+    wip_gate = summary.get("wip_gate", 0)
+    if wip_gate >= MIN_SAMPLES:
+        ratio = summary.get("wip_forced", 0) / float(wip_gate)
+        limit = cfg("wip_limit", 3)
+        if ratio >= 0.6:
+            out.append("WIP 게이트 %d회 중 %.0f%% 를 force 로 통과했다. wip_limit 을 %d 로 올리는 것을 검토."
+                       % (wip_gate, ratio * 100, limit + 1))
+        elif ratio <= 0.2:
+            out.append("WIP 게이트 %d회 중 force 는 %.0f%% 다. wip_limit %d 이 잘 맞는다."
+                       % (wip_gate, ratio * 100, limit))
+
     if summary["parked"] >= 10:
         ratio = summary["resumed"] / float(summary["parked"])
         if ratio <= 0.1:
@@ -193,6 +213,9 @@ def render(summary, advice):
     if summary["gate"]:
         lines.append("깊이 게이트 %d회 · force 통과 %d회"
                      % (summary["gate"], summary["forced"]))
+    if summary.get("wip_gate"):
+        lines.append("WIP 게이트 %d회 · force 통과 %d회"
+                     % (summary["wip_gate"], summary.get("wip_forced", 0)))
     if summary["parked"]:
         lines.append("보류함 적재 %d개 · 다시 꺼냄 %d개" % (summary["parked"], summary["resumed"]))
     if summary["dwell_n"]:
