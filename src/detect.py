@@ -5,8 +5,13 @@
 감지 정밀도가 아니라 자동 적재가 실제로 쓸 만한지를 재는 것이다.
 오탐률(T13)을 실측한 뒤에 임계를 조정한다.
 
-설계 원칙: 오탐이면 보류함에 쓰레기 한 줄이 늘고 끝난다. 미탐이면 현상 유지다.
-둘 다 싸다. 그래서 감지는 공격적이어도 되지만, PUSH 는 어떤 경우에도 하지 않는다.
+설계 원칙: PUSH 는 어떤 경우에도 자동으로 하지 않는다. 커서를 옮기는 판단은
+정규식이 할 수 없다. 담기만 한다.
+
+원래는 "오탐이면 보류함에 쓰레기 한 줄이 늘고 끝난다" 고 적어 두고 감지를
+공격적으로 잡았다. 실사용 이틀에 20건이 쌓였고 유효 0건이었다 — 오탐이 쌓이면
+보류함 자체를 안 보게 되므로 싸지 않다. 그래서 감지 대상을 "실행해서 벌어진
+일" 로 좁혔다. 미탐이 현상 유지라는 쪽만 여전히 맞다.
 """
 
 from __future__ import annotations
@@ -39,6 +44,18 @@ _SELF_MARKERS = ("wn.py", "worknav", "/wn-")
 
 # 검사 자체가 목적인 명령. 여기서 나온 error/warning 은 이미 사람이 보고 있다.
 _INSPECTION = re.compile(r"\b(?:grep|rg|ag|ack|find|cat|head|tail|less|git\s+log|git\s+diff)\b")
+
+# 읽기만 하는 툴. 응답에 담긴 error/warning 은 사건이 아니라 파일 내용이다.
+#
+# _INSPECTION 이 Bash 의 grep/cat 을 걸러내면서, 같은 일을 전용 툴로 하는 경로는
+# 안 걸러냈다. 실사용 이틀에 보류함 20건이 쌓였고 전부 이 경로였다 — 유효 0건이다.
+# `console.error(` 나 `> [!warning]` 이 든 파일을 열기만 해도 그 줄이 가지가 됐다.
+#
+# 대신 읽기가 실패한 경우(파일 없음·권한)도 같이 못 잡게 된다. 그건 진짜 사건이지만,
+# 지금 detect() 에는 성공/실패를 가를 인자가 없다. 20/20 오탐과 견주어 통째로 뺀다.
+_READ_ONLY_TOOLS = frozenset((
+    "Read", "Grep", "Glob", "NotebookRead", "WebFetch", "WebSearch", "TodoWrite",
+))
 
 # 도구가 스스로 만든 잡음. 실제 작업과 무관하다.
 _NOISE = re.compile(
@@ -104,7 +121,11 @@ def _tool_text(tool_name, tool_input, tool_response):
     실패한 명령이 통째로 안 잡히는 걸 보고서야 발견했다 — 가지의 주요 원천이
     바로 그 실패한 명령이다.
     """
-    if isinstance(tool_response, str):
+    # 빈 문자열에서 멈추면 안 된다. Edit/Write 는 응답이 비어 있어도(hooklogic 이
+    # 빈 tool_response 를 "" 로 바꿔 넘긴다) 내용이 tool_input 에 있다. 그래서
+    # `TODO` 자동 감지가 훅 경로에서만 통째로 죽어 있었다 — 단위 테스트는 dict 를
+    # 넘겨서 통과하고, 실제 훅으로 프로빙해서야 드러났다.
+    if isinstance(tool_response, str) and tool_response:
         return tool_response
     tool_input = _as_dict(tool_input)
     tool_response = _as_dict(tool_response)
@@ -125,6 +146,10 @@ def _skip_reason(tool_name, tool_input, tool_response):
     haystack = command + " " + _as_text(tool_input.get("file_path"))
     if any(marker in haystack for marker in _SELF_MARKERS):
         return "self"
+    # frozenset 조회는 tool_name 이 dict·list 면 TypeError 를 낸다. 훅의 fail-safe 가
+    # 그걸 삼켜서 밖에서는 "아무것도 안 담긴다" 로만 보인다 — R4 가 실제로 잡았다.
+    if _as_text(tool_name) in _READ_ONLY_TOOLS:
+        return "readonly"
     if tool_name == "Bash":
         if _INSPECTION.search(command):
             return "inspection"
