@@ -440,7 +440,21 @@ def on_stop(payload, root):
     if open_count:
         lines.append("현재: %s" % line)
 
-    return hookrt.context_output("Stop", "\n".join(lines))
+    # systemMessage 로 낸다 — additionalContext 가 아니다.
+    #
+    # 종료 요약은 사람이 보는 표시 계층이다(DESIGN §5.3, §4.5 "결정적"). 그런데
+    # 배선은 context_output 이었고, Stop 의 additionalContext 는 계약상 "모델이
+    # 그것을 보고 행동하도록 대화를 계속" 시킨다. 그래서 세션이 끝날 때마다 턴이
+    # 하나씩 더 돌았다. 실측 54/54 건 전부 그랬다 — CLI 에서는 "No response
+    # requested." 같은 빈 턴으로, OpenClaw 채널에서는 NO_REPLY 가 앞의 진짜
+    # 답을 덮어써 응답이 통째로 사라지는 형태로 나타났다.
+    #
+    # stop_hook_active 가드가 있어서 1회로 끝났다. 가드 없는 훅으로 대조군을
+    # 돌리니 같은 조건에서 9턴 연속으로 돌았다. 가드는 증상을 줄였을 뿐 원인이
+    # 아니다. 원인은 이 한 줄이었다.
+    return hookrt.message_output(
+        "\n".join(lines), budget=hookrt.STOP_BUDGET, multiline=True
+    )
 
 
 def _session_event_counts(root, session_id, tail_lines=400):

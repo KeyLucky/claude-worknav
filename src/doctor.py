@@ -257,7 +257,7 @@ def check_hooks_fire():
                 broken.append("%s (%s)" % (name, exc.__class__.__name__))
                 continue
             elapsed = int((time.monotonic() - started) * 1000)
-            if proc.returncode != 0 or not _valid_hook_output(proc.stdout):
+            if proc.returncode != 0 or not _valid_hook_output(proc.stdout, name):
                 broken.append("%s (rc=%d)" % (name, proc.returncode))
             elif elapsed > HOOK_SLOW_MS:
                 slow.append("%s %dms" % (name, elapsed))
@@ -288,8 +288,14 @@ def _seed_probe_state(probe):
     store.save(state, probe)
 
 
-def _valid_hook_output(text):
-    """빈 출력은 정상이다(침묵). 뭔가 냈다면 우리가 약속한 모양이어야 한다."""
+def _valid_hook_output(text, name=None):
+    """빈 출력은 정상이다(침묵). 뭔가 냈다면 우리가 약속한 모양이어야 한다.
+
+    `name="on_stop"` 이면 한 겹 더 본다. Stop 의 additionalContext 는 계약상
+    대화를 계속시키므로, 종료 요약이 그리로 나가면 세션이 끝날 때마다 턴이
+    하나 더 돈다. 채널 세션에서는 그 여분 턴이 앞의 진짜 답을 덮어쓴다.
+    형태는 멀쩡하고 rc 도 0 이라 이 검사가 없으면 아무도 못 잡는다.
+    """
     text = (text or "").strip()
     if not text:
         return True
@@ -299,7 +305,17 @@ def _valid_hook_output(text):
         return False
     if not isinstance(data, dict):
         return False
+    if name == "on_stop" and _wakes_model(data):
+        return False
     return "hookSpecificOutput" in data or "systemMessage" in data
+
+
+def _wakes_model(data):
+    """이 출력이 모델을 한 번 더 깨우는가."""
+    spec = data.get("hookSpecificOutput")
+    if isinstance(spec, dict) and spec.get("additionalContext"):
+        return True
+    return data.get("decision") == "block" or data.get("continue") is False
 
 
 def check_turns(root):

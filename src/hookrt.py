@@ -27,7 +27,12 @@ CONTEXT_BUDGET = 520
 # 그래서 여기만 예산을 더 준다 — 복귀지점과 상황 안내가 같이 들어가야 하는데
 # 520 이면 맨 뒤의 분기규칙이 잘려 나간다. 잘린 규칙은 없는 규칙보다 나쁘다.
 SESSION_BUDGET = 700
-MESSAGE_BUDGET = 80    # PostToolUse/Stop 한 줄 상한 (문자)
+MESSAGE_BUDGET = 80    # PostToolUse 인라인 한 줄 상한 (문자)
+# Stop 요약은 세션이 끝날 때 한 번만 뜨고, 작업 중에 끼어드는 인라인 한 줄과
+# 성격이 다르다(DESIGN §5.3 — 표시 계층). 그래서 예산을 따로 둔다. 80 을
+# 같이 쓰면 "현재: ⟩ 루트 › … › 현재" 줄이 통째로 날아가는데, 그 줄이 요약의
+# 본체다. 최악은 루트 제목 + 카운트 + 게이트 + 경로 한 줄로 300 을 넘지 않는다.
+STOP_BUDGET = 300
 STDIN_TIMEOUT_S = 1.0
 
 
@@ -116,8 +121,19 @@ def context_output(event_name, text, budget=CONTEXT_BUDGET):
     }
 
 
-def message_output(text):
-    text = clip_line(text)
+def message_output(text, budget=MESSAGE_BUDGET, multiline=False):
+    """사람 화면에 직접 뜨는 한 줄(또는 여러 줄). 모델을 깨우지 않는다.
+
+    `additionalContext` 와의 차이가 이 함수의 존재 이유다. 2.1.251 바이너리의
+    Stop 출력 스키마에 이렇게 적혀 있다 — "additionalContext is non-error
+    feedback delivered to the model; **the conversation continues so the model
+    can act on it**". 즉 Stop 에서 컨텍스트를 주입하면 턴이 한 번 더 도는 것이
+    부작용이 아니라 계약이다. 사람에게 보여주기만 할 것은 여기로 낸다.
+
+    multiline=True 는 Stop 요약처럼 여러 줄이 본체인 경우다. systemMessage 가
+    개행을 그대로 보존하는 것은 실측으로 확인했다(hook_system_message 렌더).
+    """
+    text = clip_context(text, budget) if multiline else clip_line(text, budget)
     if not text:
         return None
     return {"systemMessage": text}
